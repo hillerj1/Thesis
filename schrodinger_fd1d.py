@@ -73,7 +73,7 @@ def lower(A, B, grid):
 
 
 # =========================
-# Matrix builder
+# Matrix builder (2nd Order + 4th Order)
 # =========================
 def sparseMatrixMaker(A, B, C, grid):
     """
@@ -91,25 +91,41 @@ def sparseMatrixMaker(A, B, C, grid):
     N = len(grid)
     return sparse.coo_matrix((data, (rows, cols)), shape=(N, N))
 
+# grid array for 4th order
+def triplets_4th_Au_xx_plus_Cu(A, C, grid):
+    x = np.asarray(grid, dtype=float)
+    h = x[1] - x[0]
+    N = x.size
+
+    a = np.array([A(xi) for xi in x], dtype=float)
+    c = np.array([C(xi) for xi in x], dtype=float)
+
+    rows, cols, data = [], [], []
+
+def sparse_Matrix_Maker4(A, C, grid):
+    r, c, d = triplets_4th_Au_xx_plus_Cu(A, C, grid)
+    N = len(grid)
+    return sparse.coo_matrix((d, (r, c)), shape=(N, N))
 
 # =========================
-# Hamiltonian wrapper
+# Hamiltonian wrapper (2nd Order + 4th Order)
 # =========================
-def hamiltonian(V, x_inf, N):
-    """
-    Build H = -(1/2) d^2/dx^2 + V(x) on the interior grid of [-x_inf, +x_inf].
-    Returns CSR for efficiency with eigensolvers.
-    """
+def hamiltonian(V, x_left, x_right, N):
     N = int(N)
-    grid = spatial(-x_inf, x_inf, N)
+    grid = spatial(x_left, x_right, N)   # <-- uses your existing utility
 
-    def A(x):
-        return -0.5 
-
-    def B(x):
-        return 0.0  
-
-    def C(x):
-        return V(x) 
+    def A(x): return -0.5      # -(1/2) * u''
+    def B(x): return 0.0       # no first-derivative term here
+    def C(x): return V(x)      # + V(x) * u
 
     return sparseMatrixMaker(A, B, C, grid).tocsr()
+
+def hamiltonian_4th(V, x_left, x_right, N):
+    N = int(N)
+    grid = spatial(x_left, x_right, N)
+
+    def A(x): return -0.5
+    def C(x): return V(x)
+
+    return sparse_Matrix_Maker4(A, C, grid).tocsr()
+
