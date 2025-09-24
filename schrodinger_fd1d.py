@@ -106,21 +106,39 @@ def _triplets_4th_Au_xx_plus_Cu(A, C, grid):
     rows, cols, data = [], [], []
 
     def add_row(i, offsets, W):
+        "Add a row to the matrix using given stencil offsets and weights"
         for off, w in zip(offsets, W/(h*h)):
             j = i + off
             if 0 <= j < N:
                 rows.append(i); cols.append(j); data.append(a[i]*w)
         rows.append(i); cols.append(i); data.append(c[i])
+    
+    def add_boundary_correction(i, ghost_coeffs):
+        a, b, c, d = ghost_coeffs
+        if i == 0: 
+            if 0 < N: rows.append(i); cols.append(0); data.append(a[i] * a)
+            if 1 < N: rows.append(i); cols.append(1); data.append(a[i] * b) 
+            if 2 < N: rows.append(i); cols.append(2); data.append(a[i] * c)
+            if 3 < N: rows.append(i); cols.append(3); data.append(a[i] * d)
+        else: 
+            if N-1 >= 0: rows.append(i); cols.append(N-1); data.append(a[i] * a)
+            if N-2 >= 0: rows.append(i); cols.append(N-2); data.append(a[i] * b)
+            if N-3 >= 0: rows.append(i); cols.append(N-3); data.append(a[i] * c)
+            if N-4 >= 0: rows.append(i); cols.append(N-4); data.append(a[i] * d)
         
-    # handle boundaries and interior differently
     add_row(0, _OFF_L0, _W_L0)
+    add_boundary_correction(0, [4, -6, 4, -1]) 
     add_row(1, _OFF_L1, _W_L1)
+    add_boundary_correction(1, [4, -6, 4, -1])
     
     for i in range(2, N-2):
         add_row(i, _OFF_CENT, _W_CENT)
     
     add_row(N-2, _OFF_R1, _W_R1)
+    add_boundary_correction(N-2, [4, -6, 4, -1])
+    
     add_row(N-1, _OFF_R0, _W_R0)
+    add_boundary_correction(N-1, [4, -6, 4, -1])
 
     return np.array(rows), np.array(cols), np.array(data)
 
