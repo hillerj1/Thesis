@@ -69,78 +69,96 @@ def _lower(A, B, grid):
 
 
 # =========================
-# 4th-order finite difference weights
+# Private assembly functions (4th order)
 # =========================
-def _fd_weights_second_derivative(offsets):
-    offs = np.asarray(offsets, dtype=complex)
-    m = len(offs)
-    A = np.zeros((m, m), dtype=complex)
-    b = np.zeros(m, dtype=complex)
-    b[2] = 2.0
-    for k in range(m):
-        A[k, :] = offs**k
-    return np.linalg.solve(A, b)
-
-# 4th-order stencil offsets
-_OFF_CENT = np.array([-2,-1, 0, 1, 2], dtype=int)
-_OFF_L0   = np.array([ 0, 1, 2, 3, 4], dtype=int)   
-_OFF_L1   = np.array([-1, 0, 1, 2, 3], dtype=int)
-_OFF_R1   = np.array([-3,-2,-1, 0, 1], dtype=int)   
-_OFF_R0   = np.array([-4,-3,-2,-1, 0], dtype=int)   
-
-_W_CENT = _fd_weights_second_derivative(_OFF_CENT)
-_W_L0   = _fd_weights_second_derivative(_OFF_L0)
-_W_L1   = _fd_weights_second_derivative(_OFF_L1)
-_W_R1   = _fd_weights_second_derivative(_OFF_R1)
-_W_R0   = _fd_weights_second_derivative(_OFF_R0)
-
-
-def _triplets_4th_Au_xx_plus_Cu(A, C, grid):
-    x = np.asarray(grid, dtype=complex)
-    h = x[1] - x[0]
-    N = x.size
-
-    a = np.array([A(xi) for xi in x], dtype=complex)
-    c = np.array([C(xi) for xi in x], dtype=complex)
-
-    rows, cols, data = [], [], []
-
-    def add_row(i, offsets, W):
-        "Add a row to the matrix using given stencil offsets and weights"
-        for off, w in zip(offsets, W/(h*h)):
-            j = i + off
-            if 0 <= j < N:
-                rows.append(i); cols.append(j); data.append(a[i]*w)
-        rows.append(i); cols.append(i); data.append(c[i])
+def _diag_4th(A, B, C, grid):
+    x = grid  # all points
+    h = grid[1] - grid[0]
+    N = len(grid)
     
-    def add_boundary_correction(i, ghost_coeffs):
-        a, b, c, d = ghost_coeffs
-        if i == 0: 
-            if 0 < N: rows.append(i); cols.append(0); data.append(a[i] * a)
-            if 1 < N: rows.append(i); cols.append(1); data.append(a[i] * b) 
-            if 2 < N: rows.append(i); cols.append(2); data.append(a[i] * c)
-            if 3 < N: rows.append(i); cols.append(3); data.append(a[i] * d)
-        else: 
-            if N-1 >= 0: rows.append(i); cols.append(N-1); data.append(a[i] * a)
-            if N-2 >= 0: rows.append(i); cols.append(N-2); data.append(a[i] * b)
-            if N-3 >= 0: rows.append(i); cols.append(N-3); data.append(a[i] * c)
-            if N-4 >= 0: rows.append(i); cols.append(N-4); data.append(a[i] * d)
-        
-    add_row(0, _OFF_L0, _W_L0)
-    add_boundary_correction(0, [4, -6, 4, -1]) 
-    add_row(1, _OFF_L1, _W_L1)
-    add_boundary_correction(1, [4, -6, 4, -1])
+    rows = np.arange(N)
+    cols = rows
     
-    for i in range(2, N-2):
-        add_row(i, _OFF_CENT, _W_CENT)
+    a = proj(A, x)
+    b = proj(B, x)
+    c = proj(C, x)
+    data = c - (30.0 * a) / (12 * h**2)
     
-    add_row(N-2, _OFF_R1, _W_R1)
-    add_boundary_correction(N-2, [4, -6, 4, -1])
-    
-    add_row(N-1, _OFF_R0, _W_R0)
-    add_boundary_correction(N-1, [4, -6, 4, -1])
+    return rows, cols, data
 
-    return np.array(rows), np.array(cols), np.array(data)
+
+def _upper_4th(A, B, grid):
+    x = grid[:-1]  # all except last point
+    h = grid[1] - grid[0]
+    N = len(grid)
+    
+    rows = np.arange(N-1)
+    cols = rows + 1
+    
+    a = proj(A, x)
+    b = proj(B, x)
+    data = (16.0 * a) / (12 * h**2) + (8.0 * b) / (12 * h)
+    
+    return rows, cols, data
+
+
+def _lower_4th(A, B, grid):
+    x = grid[1:]  # all except first point
+    h = grid[1] - grid[0]
+    N = len(grid)
+    
+    rows = np.arange(1, N)
+    cols = rows - 1
+    
+    a = proj(A, x)
+    b = proj(B, x)
+    data = (16.0 * a) / (12 * h**2) - (8.0 * b) / (12 * h)
+    
+    return rows, cols, data
+
+
+def _upper2_4th(A, B, grid):
+    x = grid[:-2]  # all except last two points
+    h = grid[1] - grid[0]
+    N = len(grid)
+    
+    rows = np.arange(N-2)
+    cols = rows + 2
+    
+    a = proj(A, x)
+    b = proj(B, x)
+    data = (-1.0 * a) / (12 * h**2) + (1.0 * b) / (12 * h)
+    
+    return rows, cols, data
+
+
+def _lower2_4th(A, B, grid):
+    x = grid[2:]  # all except first two points
+    h = grid[1] - grid[0]
+    N = len(grid)
+    
+    rows = np.arange(2, N)
+    cols = rows - 2
+    
+    a = proj(A, x)
+    b = proj(B, x)
+    data = (-1.0 * a) / (12 * h**2) - (1.0 * b) / (12 * h)
+    
+    return rows, cols, data
+
+
+def _triplets_4th_Au_xx_plus_Bu_x_plus_Cu(A, B, C, grid):
+    rD, cD, dD = _diag_4th(A, B, C, grid)
+    rU, cU, dU = _upper_4th(A, B, grid)
+    rL, cL, dL = _lower_4th(A, B, grid)
+    rU2, cU2, dU2 = _upper2_4th(A, B, grid)
+    rL2, cL2, dL2 = _lower2_4th(A, B, grid)
+
+    rows = np.concatenate([rD, rU, rL, rU2, rL2])
+    cols = np.concatenate([cD, cU, cL, cU2, cL2])
+    data = np.concatenate([dD, dU, dL, dU2, dL2])
+
+    return rows, cols, data
 
 
 # =========================
@@ -163,12 +181,12 @@ def sparseMatrixMaker(A, B, C, grid):
     return sparse.coo_matrix((data, (rows, cols)), shape=(N, N))
 
 
-def sparse_Matrix_Maker4(A, C, grid):
+def sparse_Matrix_Maker4(A, B, C, grid):
     """
-    Assemble the sparse operator for A u'' + C u using 4th-order finite differences.
+    Assemble the sparse operator for A u'' + B u' + C u using 4th-order finite differences.
     Returns a COO matrix.
     """
-    r, c, d = _triplets_4th_Au_xx_plus_Cu(A, C, grid)
+    r, c, d = _triplets_4th_Au_xx_plus_Bu_x_plus_Cu(A, B, C, grid)
     N = len(grid)
     return sparse.coo_matrix((d, (r, c)), shape=(N, N))
 
@@ -212,7 +230,8 @@ def hamiltonian_4th(V, x_left, x_right, N):
     grid = spatial(x_left, x_right, N)
     
     def A(x): return -0.5
+    def B(x): return 0.0
     def C(x): return V(x)
     
-    return sparse_Matrix_Maker4(A, C, grid).tocsr()
+    return sparse_Matrix_Maker4(A, B, C, grid).tocsr()
 
