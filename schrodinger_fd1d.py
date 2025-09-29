@@ -72,7 +72,7 @@ def _lower(A, B, grid):
 # Private assembly functions (4th order)
 # =========================
 def _diag_4th(A, B, C, grid):
-    x = grid  # all points
+    x = grid
     h = grid[1] - grid[0]
     N = len(grid)
     
@@ -82,13 +82,26 @@ def _diag_4th(A, B, C, grid):
     a = proj(A, x)
     b = proj(B, x)
     c = proj(C, x)
+    
     data = c - (30.0 * a) / (12 * h**2)
+    
+    if N > 0:
+        data[0] += (4.0 * a[0]) / (12 * h**2)
+    
+    if N > 1:
+        data[1] += (4.0 * a[1]) / (12 * h**2)
+    
+    if N > 2:
+        data[N-2] += (4.0 * a[N-2]) / (12 * h**2)
+    
+    if N > 3:
+        data[N-1] += (4.0 * a[N-1]) / (12 * h**2)
     
     return rows, cols, data
 
 
 def _upper_4th(A, B, grid):
-    x = grid[:-1]  # all except last point
+    x = grid[:-1]
     h = grid[1] - grid[0]
     N = len(grid)
     
@@ -97,13 +110,20 @@ def _upper_4th(A, B, grid):
     
     a = proj(A, x)
     b = proj(B, x)
+    
     data = (16.0 * a) / (12 * h**2) + (8.0 * b) / (12 * h)
+    
+    if N > 0:
+        data[0] += (-6.0 * a[0]) / (12 * h**2)
+    
+    if N > 1:
+        data[1] += (-6.0 * a[1]) / (12 * h**2)
     
     return rows, cols, data
 
 
 def _lower_4th(A, B, grid):
-    x = grid[1:]  # all except first point
+    x = grid[1:]
     h = grid[1] - grid[0]
     N = len(grid)
     
@@ -112,13 +132,20 @@ def _lower_4th(A, B, grid):
     
     a = proj(A, x)
     b = proj(B, x)
+    
     data = (16.0 * a) / (12 * h**2) - (8.0 * b) / (12 * h)
+    
+    if N > 2:
+        data[N-3] += (-6.0 * a[N-3]) / (12 * h**2)
+    
+    if N > 3:
+        data[N-2] += (-6.0 * a[N-2]) / (12 * h**2)
     
     return rows, cols, data
 
 
 def _upper2_4th(A, B, grid):
-    x = grid[:-2]  # all except last two points
+    x = grid[:-2]
     h = grid[1] - grid[0]
     N = len(grid)
     
@@ -127,13 +154,20 @@ def _upper2_4th(A, B, grid):
     
     a = proj(A, x)
     b = proj(B, x)
+    
     data = (-1.0 * a) / (12 * h**2) + (1.0 * b) / (12 * h)
+    
+    if N > 0:
+        data[0] += (4.0 * a[0]) / (12 * h**2)
+    
+    if N > 1:
+        data[1] += (4.0 * a[1]) / (12 * h**2)
     
     return rows, cols, data
 
 
 def _lower2_4th(A, B, grid):
-    x = grid[2:]  # all except first two points
+    x = grid[2:]
     h = grid[1] - grid[0]
     N = len(grid)
     
@@ -142,7 +176,14 @@ def _lower2_4th(A, B, grid):
     
     a = proj(A, x)
     b = proj(B, x)
+    
     data = (-1.0 * a) / (12 * h**2) - (1.0 * b) / (12 * h)
+    
+    if N > 2:
+        data[N-4] += (4.0 * a[N-4]) / (12 * h**2)
+    
+    if N > 3:
+        data[N-3] += (4.0 * a[N-3]) / (12 * h**2)
     
     return rows, cols, data
 
