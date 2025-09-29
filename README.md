@@ -15,7 +15,7 @@ Using finite difference methods to discretize the kinetic energy operator $-\fra
 ### Core Files
 - **`fd4_QSHO_clean.ipynb`** → Main analysis notebook for the Quantum Simple Harmonic Oscillator (QSHO) with 4th-order finite differences
 - **`fd2_QSHO.ipynb`** → Earlier implementation with 2nd-order finite differences for comparison
-- **`schrodinger_fd1d.py`** → Standalone Python module containing all finite difference functions
+- **`finite_difference_quantum.py`** → Standalone Python module containing all finite difference functions
 
 ### Supporting Files
 - **`thesis_paper.sty`** → LaTeX style file for thesis document formatting
