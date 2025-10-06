@@ -48,6 +48,35 @@ def proj(f, grid):
 # Matrix utilities
 # =========================
 
+def _get_coefficients(order):
+    """
+    Get coefficient arrays for finite difference stencils.
+    
+    Parameters:
+    -----------
+    order : int
+        Finite difference order: 2 or 4
+    
+    Returns:
+    --------
+    coeffs_d2 : ndarray
+        Coefficients for second derivative term
+    coeffs_d1 : ndarray  
+        Coefficients for first derivative term
+    coeffs_d0 : ndarray
+        Coefficients for zeroth derivative term
+    """
+    if order == 2:
+        coeffs_d2 = np.array([-2.0, 1.0, 1.0])
+        coeffs_d1 = np.array([-1.0, 0.0, 1.0])
+        coeffs_d0 = np.array([0.0, 1.0, 0.0])
+    elif order == 4:
+        coeffs_d2 = np.array([-1.0/12, 16.0/12, -30.0/12, 16.0/12, -1.0/12])
+        coeffs_d1 = np.array([-1.0/12, -8.0/12, 0.0, 8.0/12, 1.0/12])
+        coeffs_d0 = np.array([0.0, 0.0, 1.0, 0.0, 0.0])
+    
+    return coeffs_d2, coeffs_d1, coeffs_d0
+
 def _diagonal_unified(A, B, C, grid, k, order=2):
     """
     Unified function for matrix diagonals with offset k.
@@ -79,54 +108,33 @@ def _diagonal_unified(A, B, C, grid, k, order=2):
     h = grid[1] - grid[0]
     N = len(grid)
     
-    if k == 0:
-        rows = np.arange(N)
-        cols = rows
-        x = grid
-    elif k > 0:
-        rows = np.arange(N - k)
-        cols = rows + k
-        x = grid[:-k] if k < N else grid[:0]
-    else:
-        rows = np.arange(-k, N)
-        cols = rows + k
-        x = grid[-k:] if -k < N else grid[:0]
+    a = max(0, -k)
+    b = min(N, N - k)
     
-    if len(x) == 0:
+    if b <= a:
         return np.array([]), np.array([]), np.array([])
     
-    a = proj(A, x)
-    b = proj(B, x) if B is not None else np.zeros_like(a)
-    c = proj(C, x) if C is not None else np.zeros_like(a)
+    rows = np.arange(a, b)
+    cols = rows + k
+    x = grid[a:b]
     
-    if order == 2:
-        if k == 0:
-            data = c - (2.0 * a) / (h**2)
-        elif k == 1:
-            data = (a / (h**2)) + (b / (2.0 * h))
-        elif k == -1:
-            data = (a / (h**2)) - (b / (2.0 * h))
-        else:
-            data = np.zeros_like(a)
+    a_vals = proj(A, x)
+    b_vals = proj(B, x) if B is not None else np.zeros_like(a_vals)
+    c_vals = proj(C, x) if C is not None else np.zeros_like(a_vals)
     
-    elif order == 4:
-        if k == 0:
-            data = c - (30.0 * a) / (12 * h**2)
-        elif k == 1:
-            data = (16.0 * a) / (12 * h**2) + (8.0 * b) / (12 * h)
-        elif k == -1:
-            data = (16.0 * a) / (12 * h**2) - (8.0 * b) / (12 * h)
-        elif k == 2:
-            data = (-1.0 * a) / (12 * h**2) + (1.0 * b) / (12 * h)
-        elif k == -2:
-            data = (-1.0 * a) / (12 * h**2) - (1.0 * b) / (12 * h)
+    coeffs_d2, coeffs_d1, coeffs_d0 = _get_coefficients(order)
+    
+    idx = k + order//2
+    data = (coeffs_d2[idx] * a_vals / (h**2) + 
+            coeffs_d1[idx] * b_vals / h + 
+            coeffs_d0[idx] * c_vals)
     
     return rows, cols, data
 
 
-def _boundary_corrections_4th(A, grid):
+def _boundary_corrections(A, grid, order=4):
     """
-    Generate boundary corrections for 4th order finite differences.
+    Generate boundary corrections for finite differences.
     
     Parameters:
     -----------
@@ -134,6 +142,8 @@ def _boundary_corrections_4th(A, grid):
         Coefficient function for second derivative term (A * u'')
     grid : array_like
         Spatial grid points where the operator is evaluated
+    order : int, optional
+        Finite difference order: 2 or 4 (default: 4)
     
     Returns:
     --------
@@ -151,27 +161,26 @@ def _boundary_corrections_4th(A, grid):
     cols = []
     data = []
     
+    if order == 2:
+        return np.array(rows), np.array(cols), np.array(data)
+    
     a = proj(A, grid)
     
-    if N >= 4:
+    if N >= 4 and order == 4:
         correction_factor = 1.0 / (12 * h**2)
         
-        # Row 0 corrections: add to positions (0,0), (0,1), (0,2), (0,3)
         rows.extend([0, 0, 0, 0])
         cols.extend([0, 1, 2, 3])
         data.extend([4.0 * a[0] * correction_factor, -6.0 * a[0] * correction_factor, 4.0 * a[0] * correction_factor, -1.0 * a[0] * correction_factor])
         
-        # Row 1 corrections: add to positions (1,0), (1,1), (1,2), (1,3)
         rows.extend([1, 1, 1, 1])
         cols.extend([0, 1, 2, 3])
         data.extend([4.0 * a[1] * correction_factor, -6.0 * a[1] * correction_factor, 4.0 * a[1] * correction_factor, -1.0 * a[1] * correction_factor])
         
-        # Row N-2 corrections: add to positions (N-2,N-4), (N-2,N-3), (N-2,N-2), (N-2,N-1)
         rows.extend([N-2, N-2, N-2, N-2])
         cols.extend([N-4, N-3, N-2, N-1])
         data.extend([-1.0 * a[N-2] * correction_factor, 4.0 * a[N-2] * correction_factor, -6.0 * a[N-2] * correction_factor, 4.0 * a[N-2] * correction_factor])
         
-        # Row N-1 corrections: add to positions (N-1,N-4), (N-1,N-3), (N-1,N-2), (N-1,N-1)
         rows.extend([N-1, N-1, N-1, N-1])
         cols.extend([N-4, N-3, N-2, N-1])
         data.extend([-1.0 * a[N-1] * correction_factor, 4.0 * a[N-1] * correction_factor, -6.0 * a[N-1] * correction_factor, 4.0 * a[N-1] * correction_factor])
@@ -202,13 +211,45 @@ def sparseMatrixMaker(A, B, C, grid):
     matrix : scipy.sparse.coo_matrix
         Sparse matrix in COO format representing the finite difference operator
     """
-    rD, cD, dD = _diagonal_unified(A, B, C, grid, 0, order=2)
-    rU, cU, dU = _diagonal_unified(A, B, C, grid, 1, order=2)
-    rL, cL, dL = _diagonal_unified(A, B, C, grid, -1, order=2)
+    return sparse_Matrix_Maker(A, B, C, grid, order=2)
 
-    rows = np.concatenate([rD, rU, rL])
-    cols = np.concatenate([cD, cU, cL])
-    data = np.concatenate([dD, dU, dL])
+
+def sparse_Matrix_Maker(A, B, C, grid, order=2):
+    """
+    Assemble the sparse operator for A u'' + B u' + C u using finite differences with boundary corrections.
+    
+    Parameters:
+    -----------
+    A : callable
+        Coefficient function for second derivative term (A * u'')
+    B : callable or None
+        Coefficient function for first derivative term (B * u')
+    C : callable or None
+        Coefficient function for zeroth derivative term (C * u)
+    grid : array_like
+        Spatial grid points where the operator is evaluated
+    order : int, optional
+        Finite difference order: 2 or 4 (default: 2)
+    
+    Returns:
+    --------
+    matrix : scipy.sparse.coo_matrix
+        Sparse matrix in COO format representing the finite difference operator
+    """
+    rows = np.array([])
+    cols = np.array([])
+    data = np.array([])
+    
+    for k in range(-order//2, order//2 + 1):
+        r, c, d = _diagonal_unified(A, B, C, grid, k, order=order)
+        rows = np.concatenate([rows, r])
+        cols = np.concatenate([cols, c])
+        data = np.concatenate([data, d])
+    
+    rBC, cBC, dBC = _boundary_corrections(A, grid, order=order)
+    rows = np.concatenate([rows, rBC])
+    cols = np.concatenate([cols, cBC])
+    data = np.concatenate([data, dBC])
 
     N = len(grid)
     return sparse.coo_matrix((data, (rows, cols)), shape=(N, N))
@@ -234,19 +275,7 @@ def sparse_Matrix_Maker4(A, B, C, grid):
     matrix : scipy.sparse.coo_matrix
         Sparse matrix in COO format representing the finite difference operator
     """
-    rD, cD, dD = _diagonal_unified(A, B, C, grid, 0, order=4)
-    rU, cU, dU = _diagonal_unified(A, B, C, grid, 1, order=4)
-    rL, cL, dL = _diagonal_unified(A, B, C, grid, -1, order=4)
-    rU2, cU2, dU2 = _diagonal_unified(A, B, C, grid, 2, order=4)
-    rL2, cL2, dL2 = _diagonal_unified(A, B, C, grid, -2, order=4)
-    rBC, cBC, dBC = _boundary_corrections_4th(A, grid)
-
-    rows = np.concatenate([rD, rU, rL, rU2, rL2, rBC])
-    cols = np.concatenate([cD, cU, cL, cU2, cL2, cBC])
-    data = np.concatenate([dD, dU, dL, dU2, dL2, dBC])
-
-    N = len(grid)
-    return sparse.coo_matrix((data, (rows, cols)), shape=(N, N))
+    return sparse_Matrix_Maker(A, B, C, grid, order=4)
 
 
 # =========================
