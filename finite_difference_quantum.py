@@ -281,9 +281,9 @@ def sparse_Matrix_Maker4(A, B, C, grid):
 # =========================
 # Hamiltonian functions
 # =========================
-def hamiltonian(V, x_left, x_right, N):
+def hamiltonian(V, x_left, x_right, N, order=2):
     """
-    Create 2nd-order quantum mechanical hamiltonian operator H = -½∇² + V(x).
+    Create quantum mechanical hamiltonian operator H = -½∇² + V(x).
     
     Parameters:
     -----------
@@ -295,6 +295,8 @@ def hamiltonian(V, x_left, x_right, N):
         Right boundary of the domain
     N : int
         Number of interior grid points
+    order : int, optional
+        Finite difference order: 2 or 4 (default: 2)
     
     Returns:
     --------
@@ -304,11 +306,11 @@ def hamiltonian(V, x_left, x_right, N):
     N = int(N)
     grid = spatial(x_left, x_right, N)
     
-    def A(x): return -0.5  # kinetic energy coefficient
+    def A(x): return -0.5
     def B(x): return 0.0
-    def C(x): return V(x)  # potential energy
+    def C(x): return V(x)
     
-    return sparseMatrixMaker(A, B, C, grid).tocsr()
+    return sparse_Matrix_Maker(A, B, C, grid, order=order).tocsr()
 
 
 def hamiltonian_4th(V, x_left, x_right, N):
@@ -331,12 +333,5 @@ def hamiltonian_4th(V, x_left, x_right, N):
     H : scipy.sparse.csr_matrix
         Sparse matrix representing the hamiltonian operator in CSR format
     """
-    N = int(N)
-    grid = spatial(x_left, x_right, N)
-    
-    def A(x): return -0.5
-    def B(x): return 0.0
-    def C(x): return V(x)
-    
-    return sparse_Matrix_Maker4(A, B, C, grid).tocsr()
+    return hamiltonian(V, x_left, x_right, N, order=4)
 
