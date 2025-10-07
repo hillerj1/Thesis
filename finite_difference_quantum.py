@@ -166,24 +166,18 @@ def _boundary_corrections(A, grid, order=4):
     
     a = proj(A, grid)
     
-    if N >= 4 and order == 4:
+    if N >= 3 and order == 4:
         correction_factor = 1.0 / (12 * h**2)
         
-        rows.extend([0, 0, 0, 0])
-        cols.extend([0, 1, 2, 3])
-        data.extend([4.0 * a[0] * correction_factor, -6.0 * a[0] * correction_factor, 4.0 * a[0] * correction_factor, -1.0 * a[0] * correction_factor])
+        # First row: correct positions (0,0), (0,1), (0,2)
+        rows.extend([0, 0, 0])
+        cols.extend([0, 1, 2])
+        data.extend([4.0 * a[0] * correction_factor, -6.0 * a[0] * correction_factor, 4.0 * a[0] * correction_factor])
         
-        rows.extend([1, 1, 1, 1])
-        cols.extend([0, 1, 2, 3])
-        data.extend([4.0 * a[1] * correction_factor, -6.0 * a[1] * correction_factor, 4.0 * a[1] * correction_factor, -1.0 * a[1] * correction_factor])
-        
-        rows.extend([N-2, N-2, N-2, N-2])
-        cols.extend([N-4, N-3, N-2, N-1])
-        data.extend([-1.0 * a[N-2] * correction_factor, 4.0 * a[N-2] * correction_factor, -6.0 * a[N-2] * correction_factor, 4.0 * a[N-2] * correction_factor])
-        
-        rows.extend([N-1, N-1, N-1, N-1])
-        cols.extend([N-4, N-3, N-2, N-1])
-        data.extend([-1.0 * a[N-1] * correction_factor, 4.0 * a[N-1] * correction_factor, -6.0 * a[N-1] * correction_factor, 4.0 * a[N-1] * correction_factor])
+        # Last row: correct positions (N-1,N-3), (N-1,N-2), (N-1,N-1)
+        rows.extend([N-1, N-1, N-1])
+        cols.extend([N-3, N-2, N-1])
+        data.extend([-1.0 * a[N-1] * correction_factor, 4.0 * a[N-1] * correction_factor, -6.0 * a[N-1] * correction_factor])
     
     return np.array(rows), np.array(cols), np.array(data)
 
