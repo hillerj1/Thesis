@@ -72,7 +72,7 @@ def _get_coefficients(order):
         coeffs_d0 = np.array([0.0, 1.0, 0.0])
     elif order == 4:
         coeffs_d2 = np.array([-1.0/12, 16.0/12, -30.0/12, 16.0/12, -1.0/12])
-        coeffs_d1 = np.array([-1.0/12, -8.0/12, 0.0, 8.0/12, 1.0/12])
+        coeffs_d1 = np.array([1.0/12, -8.0/12, 0.0, 8.0/12, -1.0/12])
         coeffs_d0 = np.array([0.0, 0.0, 1.0, 0.0, 0.0])
     
     return coeffs_d2, coeffs_d1, coeffs_d0
