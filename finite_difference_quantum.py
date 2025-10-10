@@ -132,7 +132,7 @@ def _diagonal_unified(A, B, C, grid, k, order=2):
     return rows, cols, data
 
 
-def _boundary_corrections(A, grid, order=4):
+def _boundary_corrections(A, B, C, grid, order=4):
     """
     Generate boundary corrections for finite differences.
     
@@ -140,6 +140,10 @@ def _boundary_corrections(A, grid, order=4):
     -----------
     A : callable
         Coefficient function for second derivative term (A * u'')
+    B : callable or None
+        Coefficient function for first derivative term (B * u')
+    C : callable or None
+        Coefficient function for zeroth derivative term (C * u)
     grid : array_like
         Spatial grid points where the operator is evaluated
     order : int, optional
@@ -154,7 +158,6 @@ def _boundary_corrections(A, grid, order=4):
     data : ndarray
         Correction values for sparse matrix construction
     """
-    h = grid[1] - grid[0]
     N = len(grid)
     
     rows = []
@@ -164,20 +167,53 @@ def _boundary_corrections(A, grid, order=4):
     if order == 2:
         return np.array(rows), np.array(cols), np.array(data)
     
-    a = proj(A, grid)
-    
-    if N >= 3 and order == 4:
-        correction_factor = 1.0 / (12 * h**2)
+    if N >= 4 and order == 4:
+        h = grid[1] - grid[0]
+        coeffs_d2, coeffs_d1, coeffs_d0 = _get_coefficients(order)
         
-        # First row: correct positions (0,0), (0,1), (0,2)
-        rows.extend([0, 0, 0])
-        cols.extend([0, 1, 2])
-        data.extend([4.0 * a[0] * correction_factor, -6.0 * a[0] * correction_factor, 4.0 * a[0] * correction_factor])
+        a = proj(A, grid)
+        b_vals = proj(B, grid) if B is not None else np.zeros(N)
+        c_vals = proj(C, grid) if C is not None else np.zeros(N)
         
-        # Last row: correct positions (N-1,N-3), (N-1,N-2), (N-1,N-1)
-        rows.extend([N-1, N-1, N-1])
-        cols.extend([N-3, N-2, N-1])
-        data.extend([-1.0 * a[N-1] * correction_factor, 4.0 * a[N-1] * correction_factor, -6.0 * a[N-1] * correction_factor])
+        M_1_minus_1 = (coeffs_d2[0] * a[0] / (h**2) + 
+                      coeffs_d1[0] * b_vals[0] / h + 
+                      coeffs_d0[0] * c_vals[0])
+        
+        M_N_plus_1 = (coeffs_d2[4] * a[N-1] / (h**2) + 
+                     coeffs_d1[4] * b_vals[N-1] / h + 
+                     coeffs_d0[4] * c_vals[N-1])
+        
+        rows.extend([0, 0, 0, 0])
+        cols.extend([0, 1, 2, 3])
+        data.extend([
+            -6.0 * M_1_minus_1,
+            4.0 * M_1_minus_1,
+            -1.0 * M_1_minus_1,
+            0.0 * M_1_minus_1
+        ])
+        
+        rows.extend([1, 2])
+        cols.extend([0, 0])
+        data.extend([
+            4.0 * M_1_minus_1,
+            -1.0 * M_1_minus_1
+        ])
+        
+        rows.extend([N-2, N-3])
+        cols.extend([N-1, N-1])
+        data.extend([
+            4.0 * M_N_plus_1,
+            -1.0 * M_N_plus_1
+        ])
+        
+        rows.extend([N-1, N-1, N-1, N-1])
+        cols.extend([N-4, N-3, N-2, N-1])
+        data.extend([
+            0.0 * M_N_plus_1,
+            -1.0 * M_N_plus_1,
+            4.0 * M_N_plus_1,
+            -6.0 * M_N_plus_1
+        ])
     
     return np.array(rows), np.array(cols), np.array(data)
 
@@ -240,7 +276,7 @@ def sparse_Matrix_Maker(A, B, C, grid, order=2):
         cols = np.concatenate([cols, c])
         data = np.concatenate([data, d])
     
-    rBC, cBC, dBC = _boundary_corrections(A, grid, order=order)
+    rBC, cBC, dBC = _boundary_corrections(A, B, C, grid, order=order)
     rows = np.concatenate([rows, rBC])
     cols = np.concatenate([cols, cBC])
     data = np.concatenate([data, dBC])
