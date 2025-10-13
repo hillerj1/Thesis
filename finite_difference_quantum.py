@@ -183,33 +183,17 @@ def _boundary_corrections(A, B, C, grid, order=4):
                      coeffs_d1[4] * b_vals[N-1] / h + 
                      coeffs_d0[4] * c_vals[N-1])
         
-        rows.extend([0, 0, 0, 0])
-        cols.extend([0, 1, 2, 3])
+        rows.extend([0, 0, 0])
+        cols.extend([0, 1, 2])
         data.extend([
             -6.0 * M_1_minus_1,
             4.0 * M_1_minus_1,
-            -1.0 * M_1_minus_1,
-            0.0 * M_1_minus_1
-        ])
-        
-        rows.extend([1, 2])
-        cols.extend([0, 0])
-        data.extend([
-            4.0 * M_1_minus_1,
             -1.0 * M_1_minus_1
         ])
-        
-        rows.extend([N-2, N-3])
-        cols.extend([N-1, N-1])
+
+        rows.extend([N-1, N-1, N-1])
+        cols.extend([N-3, N-2, N-1])
         data.extend([
-            4.0 * M_N_plus_1,
-            -1.0 * M_N_plus_1
-        ])
-        
-        rows.extend([N-1, N-1, N-1, N-1])
-        cols.extend([N-4, N-3, N-2, N-1])
-        data.extend([
-            0.0 * M_N_plus_1,
             -1.0 * M_N_plus_1,
             4.0 * M_N_plus_1,
             -6.0 * M_N_plus_1
