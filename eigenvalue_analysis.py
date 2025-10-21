@@ -42,8 +42,6 @@ def numerical_ISW_eigenvalues(n_eigenvalues, n_grid_points, order=4, L=1.0):
     Numerical eigenvalues for ISW using finite differences.
     Computes all n_eigenvalues in a single call for efficiency.
     """
-    if n_eigenvalues >= n_grid_points:
-        raise ValueError(f"n_eigenvalues ({n_eigenvalues}) must be < n_grid_points ({n_grid_points})")
     
     def V_ISW(x):
         return np.zeros_like(x)
@@ -61,9 +59,7 @@ def numerical_QSHO_eigenvalues(n_eigenvalues, n_grid_points, order=4, omega=1.0,
     Computes all n_eigenvalues in a single call for efficiency.
     x_max is auto-determined if not specified.
     """
-    if n_eigenvalues >= n_grid_points:
-        raise ValueError(f"n_eigenvalues ({n_eigenvalues}) must be < n_grid_points ({n_grid_points})")
-    
+
     if x_max is None:
         E_max = (n_eigenvalues - 1 + 0.5) * omega
         x_classical = np.sqrt(2 * E_max / omega)
@@ -89,9 +85,6 @@ def compute_eigenvalue_discrepancies(numerical_eigenvalues, analytical_eigenvalu
     """
     numerical = np.asarray(numerical_eigenvalues)
     analytical = np.asarray(analytical_eigenvalues)
-    
-    if len(numerical) != len(analytical):
-        raise ValueError(f"Array lengths must match: {len(numerical)} vs {len(analytical)}")
     
     absolute_errors = np.abs(numerical - analytical)
     relative_errors = np.abs((numerical - analytical) / analytical)
