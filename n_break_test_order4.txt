@@ -1,0 +1,67 @@
+Testing 4nd order finite difference method
+Started: 2025-10-31 08:14:52.556847
+============================================================
+
+N=10: Matrix created successfully (44 nonzeros)
+N=10: Eigenvalue computation succeeded, E0=5.072788
+
+Doubling N to 20
+
+N=20: Matrix created successfully (94 nonzeros)
+N=20: Eigenvalue computation succeeded, E0=5.007812
+
+Doubling N to 40
+
+N=40: Matrix created successfully (194 nonzeros)
+N=40: Eigenvalue computation succeeded, E0=4.972188
+
+Doubling N to 80
+
+N=80: Matrix created successfully (394 nonzeros)
+N=80: Eigenvalue computation succeeded, E0=4.953698
+
+Doubling N to 160
+
+N=160: Matrix created successfully (794 nonzeros)
+N=160: Eigenvalue computation succeeded, E0=4.944298
+
+Doubling N to 320
+
+N=320: Matrix created successfully (1594 nonzeros)
+N=320: Eigenvalue computation succeeded, E0=4.939562
+
+Doubling N to 640
+
+N=640: Matrix created successfully (3194 nonzeros)
+N=640: Eigenvalue computation succeeded, E0=4.937185
+
+Doubling N to 1280
+
+N=1280: Matrix created successfully (6394 nonzeros)
+N=1280: Eigenvalue computation succeeded, E0=4.935994
+
+Doubling N to 2560
+
+N=2560: Matrix created successfully (12794 nonzeros)
+N=2560: Eigenvalue computation succeeded, E0=4.935398
+
+Doubling N to 5120
+
+N=5120: Matrix created successfully (25594 nonzeros)
+N=5120: Eigenvalue computation succeeded, E0=4.935100
+
+Doubling N to 10240
+
+N=10240: Matrix created successfully (51194 nonzeros)
+N=10240: Eigenvalue computation succeeded, E0=4.934951
+
+Doubling N to 20480
+
+N=20480: Matrix created successfully (102394 nonzeros)
+
+============================================================
+STOPPED at N=20480 due to ArpackNoConvergence
+Last successful N: 10240
+Error: ARPACK error -1: No convergence (100001 iterations, 0/1 eigenvectors converged)
+
+Finished: 2025-10-31 08:18:28.612673
