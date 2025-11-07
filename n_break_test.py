@@ -1,144 +1,66 @@
 import numpy as np
-import scipy.sparse as sp
-from scipy.sparse.linalg import eigsh, ArpackNoConvergence
-from scipy.linalg import eig
-import datetime
+import sys
+from finite_difference_quantum import sparseMatrixMaker, sparse_Matrix_Maker4, spatial
 
-def create_2nd_order_matrix(N, A, B, C, x_left, x_right):
-    Delta = (x_right - x_left) / (N + 1)
-    grid = np.linspace(x_left + Delta, x_right - Delta, N)
-    A_vals = A(grid)
-    B_vals = B(grid)
-    C_vals = C(grid)
-    diagonal = C_vals - 2 * A_vals / Delta**2
-    upper = A_vals[:-1] / Delta**2 + B_vals[:-1] / (2 * Delta)
-    lower = A_vals[1:] / Delta**2 - B_vals[1:] / (2 * Delta)
-    return sp.diags([lower, diagonal, upper], [-1, 0, 1], format='csr')
+def A(x):
+    return np.random.rand()
+def B(x):
+    return np.random.rand()
+def C(x):
+    return np.random.rand()
 
+x_left, x_right = 0.0, 1.0
 
-def create_4th_order_matrix(N, A, B, C, x_left, x_right):
-    if N < 4:
-        raise ValueError(f"N must be >= 4 for 4th order, got N={N}")
-    
-    Delta = (x_right - x_left) / (N + 1)
-    grid = np.linspace(x_left + Delta, x_right - Delta, N)
-    A_vals = A(grid)
-    B_vals = B(grid)
-    C_vals = C(grid)
-    main_diag = C_vals - 30 * A_vals / (12 * Delta**2)
-    upper1 = 16 * A_vals[:-1] / (12 * Delta**2) + 8 * B_vals[:-1] / (12 * Delta)
-    lower1 = 16 * A_vals[1:] / (12 * Delta**2) - 8 * B_vals[1:] / (12 * Delta)
-    upper2 = -A_vals[:-2] / (12 * Delta**2) - B_vals[:-2] / (12 * Delta)
-    lower2 = -A_vals[2:] / (12 * Delta**2) + B_vals[2:] / (12 * Delta)
-    
-    data = []
-    offsets = []
-    for offset, vals in [(-2, lower2), (-1, lower1), (0, main_diag), (1, upper1), (2, upper2)]:
-        if len(vals) > 0:
-            data.append(vals)
-            offsets.append(offset)
-    
-    return sp.diags(data, offsets, format='csr', shape=(N, N))
-
-
-def test_method(order, x_left, x_right):
-    def A(x):
-        return -0.5 * np.ones_like(x)
-    def B(x):
-        return np.zeros_like(x)
-    def C(x):
-        return np.zeros_like(x)
-    
-    log_file = f"n_break_test_order{order}.txt"
+def test_order(order):
+    print(f"\n{'='*50}")
+    print(f"Starting {order}nd order test")
+    print(f"{'='*50}")
     n = 10
-    max_n_reached = 10
+    last_n_written = None
+    max_iterations = 100  
     
-    with open(log_file, 'w') as f:
-        f.write(f"Testing {order}nd order finite difference method\n")
-        f.write(f"Started: {datetime.datetime.now()}\n")
-        f.write(f"=" * 60 + "\n\n")
-    
-    while True:
+    iteration = 0
+    while iteration < max_iterations:
+        iteration += 1
         try:
-            if order == 4 and n < 4:
-                n *= 2
-                continue
+            print(f"  Attempting n={n}...", end=" ", flush=True)
+            grid = spatial(x_left, x_right, n)
             
             if order == 2:
-                M = create_2nd_order_matrix(n, A, B, C, x_left, x_right)
+                M = sparseMatrixMaker(A, B, C, grid)
             else:
-                M = create_4th_order_matrix(n, A, B, C, x_left, x_right)
+                if n < 4:
+                    print(f"skipped (need n >= 4)")
+                    n *= 2
+                    continue
+                M = sparse_Matrix_Maker4(A, B, C, grid)
             
-            print(f"Order {order}: N={n}")
-            with open(log_file, 'a') as f:
-                f.write(f"N={n}: Matrix created ({M.nnz} nonzeros)\n")
+            with open(f"n_break_order{order}.txt", "a") as f:
+                f.write(f"{n}\n")
             
-            if n <= 4:
-                eigenvalues, _ = eig(M.toarray())
-                eigenvalues = np.sort(eigenvalues.real)[:1]
-            else:
-                try:
-                    eigenvalues, _ = eigsh(M, k=1, which='SA', tol=1e-8, maxiter=50000)
-                except ArpackNoConvergence:
-                    try:
-                        eigenvalues, _ = eigsh(M, k=1, which='SA', tol=1e-6, maxiter=100000)
-                    except ArpackNoConvergence:
-                        eigenvalues, _ = eigsh(M, k=1, sigma=0, which='LM', maxiter=100000)
-            
-            max_n_reached = n
-            with open(log_file, 'a') as f:
-                f.write(f"N={n}: Success, E0={eigenvalues[0]:.6f}\n\n")
-            
+            print(f"Success!")
+            last_n_written = n
             n *= 2
-            
         except MemoryError as e:
-            print(f"Order {order}: Memory error at N={n}")
-            with open(log_file, 'a') as f:
-                f.write(f"\n{'='*60}\n")
-                f.write(f"STOPPED at N={n} due to MemoryError\n")
-                f.write(f"Last successful N: {max_n_reached}\n")
-                f.write(f"Error: {str(e)}\n")
-            break
-            
-        except KeyboardInterrupt:
-            print(f"\nOrder {order}: Interrupted at N={n}")
-            with open(log_file, 'a') as f:
-                f.write(f"\n{'='*60}\n")
-                f.write(f"STOPPED at N={n} due to KeyboardInterrupt\n")
-                f.write(f"Last successful N: {max_n_reached}\n")
-            break
-            
-        except Exception as e:
-            error_type = type(e).__name__
-            print(f"Order {order}: Error at N={n}: {error_type}")
-            
-            if isinstance(e, (ValueError, np.linalg.LinAlgError, ArpackNoConvergence)):
-                with open(log_file, 'a') as f:
-                    f.write(f"\n{'='*60}\n")
-                    f.write(f"STOPPED at N={n} due to {error_type}\n")
-                    f.write(f"Last successful N: {max_n_reached}\n")
-                    f.write(f"Error: {str(e)}\n")
-                break
-            else:
-                with open(log_file, 'a') as f:
-                    f.write(f"N={n}: Error - {error_type}: {str(e)}\n")
-                    f.write(f"Continuing...\n\n")
-                n *= 2
-                continue
+            print(f"\n{'='*50}")
+            print(f"{order}nd order FINISHED (Memory Error)!")
+            print(f"Last successful n: {last_n_written}")
+            print(f"Failed at n: {n}")
+            print(f"Error: {str(e)}")
+            print(f"Results saved to: n_break_order{order}.txt")
+            print(f"{'='*50}\n")
+            return
     
-    with open(log_file, 'a') as f:
-        f.write(f"\nFinished: {datetime.datetime.now()}\n")
-    
-    print(f"Order {order}: Max N = {max_n_reached}, saved to {log_file}")
+    print(f"\n{'='*50}")
+    print(f"{order}nd order FINISHED (reached max iterations)!")
+    print(f"Last successful n: {last_n_written}")
+    print(f"Results saved to: n_break_order{order}.txt")
+    print(f"{'='*50}\n")
 
+# Run tests
+for order in [4, 2]:
+    test_order(order)
 
-if __name__ == "__main__":
-    x_left, x_right = 0.0, 1.0
-    
-    print("N_break test: doubling N until failure")
-    print(f"Results saved to n_break_test_order*.txt\n")
-    
-    test_method(2, x_left, x_right)
-    test_method(4, x_left, x_right)
-    
-    print("\nDone")
+print("\n" + "="*50)
+print("ALL TESTS COMPLETE!")
+print("="*50)
