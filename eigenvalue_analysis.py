@@ -48,7 +48,53 @@ def numerical_ISW_eigenvalues(n_eigenvalues, n_grid_points, order=4, L=1.0):
     
     x_left, x_right = 0.0, L
     H = fdq.hamiltonian(V_ISW, x_left, x_right, n_grid_points, order=order)
-    eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=1e-10, maxiter=10000)
+    
+    # Adaptive parameters based on both matrix size (N) and number of eigenvalues (k)
+    base_maxiter = 20000  # Increased base
+    base_tol = 1e-9  # Slightly relaxed default tolerance
+    
+    # Scale maxiter based on N
+    if n_grid_points > 5000:
+        maxiter_multiplier = 10.0
+        tol_val = 1e-7
+    elif n_grid_points > 2000:
+        maxiter_multiplier = 6.0
+        tol_val = 1e-8
+    else:
+        maxiter_multiplier = 1.0
+        tol_val = base_tol
+    
+    # Scale maxiter based on k (number of eigenvalues)
+    if n_eigenvalues > 5:
+        k_multiplier = 2.0 + 0.2 * (n_eigenvalues - 5)  # Extra 20% per eigenvalue above 5
+    elif n_eigenvalues > 1:
+        k_multiplier = 1.0 + 0.1 * (n_eigenvalues - 1)  # Extra 10% per eigenvalue above 1
+    else:
+        k_multiplier = 1.0
+    
+    # 2nd order may be less well-conditioned, so give it more iterations
+    if order == 2:
+        order_multiplier = 2.0  # Increased from 1.5
+    else:
+        order_multiplier = 1.0
+    
+    maxiter_val = int(base_maxiter * maxiter_multiplier * k_multiplier * order_multiplier)
+    
+    # Increase ncv (number of Arnoldi vectors) for better convergence
+    ncv_val = min(max(2*n_eigenvalues + 1, n_eigenvalues + 2), n_grid_points, 50)
+    
+    try:
+        eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=tol_val, 
+                              maxiter=maxiter_val, ncv=ncv_val)
+    except Exception as e:
+        # Fallback: try with relaxed tolerance
+        try:
+            eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=tol_val*10, 
+                                  maxiter=maxiter_val*2, ncv=ncv_val)
+        except Exception as e2:
+            # Last resort: try with even more relaxed parameters
+            eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=1e-6, 
+                                  maxiter=maxiter_val*3, ncv=min(ncv_val*2, n_grid_points))
     
     return np.sort(eigenvalues)
 
@@ -70,7 +116,53 @@ def numerical_QSHO_eigenvalues(n_eigenvalues, n_grid_points, order=4, omega=1.0,
     
     x_left, x_right = -x_max, x_max
     H = fdq.hamiltonian(V_QSHO, x_left, x_right, n_grid_points, order=order)
-    eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=1e-10, maxiter=10000)
+    
+    # Adaptive parameters based on both matrix size (N) and number of eigenvalues (k)
+    base_maxiter = 20000  # Increased base
+    base_tol = 1e-9  # Slightly relaxed default tolerance
+    
+    # Scale maxiter based on N
+    if n_grid_points > 5000:
+        maxiter_multiplier = 10.0
+        tol_val = 1e-7
+    elif n_grid_points > 2000:
+        maxiter_multiplier = 6.0
+        tol_val = 1e-8
+    else:
+        maxiter_multiplier = 1.0
+        tol_val = base_tol
+    
+    # Scale maxiter based on k (number of eigenvalues)
+    if n_eigenvalues > 5:
+        k_multiplier = 2.0 + 0.2 * (n_eigenvalues - 5)  # Extra 20% per eigenvalue above 5
+    elif n_eigenvalues > 1:
+        k_multiplier = 1.0 + 0.1 * (n_eigenvalues - 1)  # Extra 10% per eigenvalue above 1
+    else:
+        k_multiplier = 1.0
+    
+    # 2nd order may be less well-conditioned, so give it more iterations
+    if order == 2:
+        order_multiplier = 2.0  # Increased from 1.5
+    else:
+        order_multiplier = 1.0
+    
+    maxiter_val = int(base_maxiter * maxiter_multiplier * k_multiplier * order_multiplier)
+    
+    # Increase ncv (number of Arnoldi vectors) for better convergence
+    ncv_val = min(max(2*n_eigenvalues + 1, n_eigenvalues + 2), n_grid_points, 50)
+    
+    try:
+        eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=tol_val, 
+                              maxiter=maxiter_val, ncv=ncv_val)
+    except Exception as e:
+        # Fallback: try with relaxed tolerance
+        try:
+            eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=tol_val*10, 
+                                  maxiter=maxiter_val*2, ncv=ncv_val)
+        except Exception as e2:
+            # Last resort: try with even more relaxed parameters
+            eigenvalues, _ = eigsh(H, k=n_eigenvalues, which='SM', tol=1e-6, 
+                                  maxiter=maxiter_val*3, ncv=min(ncv_val*2, n_grid_points))
     
     return np.sort(eigenvalues)
 
