@@ -67,7 +67,7 @@ def _get_coefficients(order):
         Coefficients for zeroth derivative term
     """
     if order == 2:
-        coeffs_d2 = np.array([-2.0, 1.0, 1.0])
+        coeffs_d2 = np.array([1.0, -2.0, 1.0])
         coeffs_d1 = np.array([-1.0, 0.0, 1.0])
         coeffs_d0 = np.array([0.0, 1.0, 0.0])
     elif order == 4:
