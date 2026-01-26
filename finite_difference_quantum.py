@@ -111,6 +111,10 @@ def _diagonal_unified(A, B, C, grid, k, order=2):
     a = max(0, -k)
     b = min(N, N - k)
     
+    if order == 4:
+        a = max(a, 2)
+        b = min(b, N - 2)
+    
     if b <= a:
         return np.array([]), np.array([]), np.array([])
     
@@ -183,7 +187,6 @@ def _boundary_corrections(A, B, C, grid, order=4):
                      coeffs_d1[4] * b_vals[N-1] / h + 
                      coeffs_d0[4] * c_vals[N-1])
         
-        # Add boundary corrections at the left boundary (row 0) and their symmetric counterparts
         rows.extend([0, 0, 0])
         cols.extend([0, 1, 2])
         data.extend([
@@ -191,7 +194,6 @@ def _boundary_corrections(A, B, C, grid, order=4):
             4.0 * M_1_minus_1,
             -1.0 * M_1_minus_1
         ])
-        # Symmetric counterparts for (0,1) -> (1,0) and (0,2) -> (2,0)
         rows.extend([1, 2])
         cols.extend([0, 0])
         data.extend([
@@ -199,7 +201,6 @@ def _boundary_corrections(A, B, C, grid, order=4):
             -1.0 * M_1_minus_1
         ])
 
-        # Add boundary corrections at the right boundary (row N-1) and their symmetric counterparts
         rows.extend([N-1, N-1, N-1])
         cols.extend([N-3, N-2, N-1])
         data.extend([
@@ -207,7 +208,6 @@ def _boundary_corrections(A, B, C, grid, order=4):
             4.0 * M_N_plus_1,
             -6.0 * M_N_plus_1
         ])
-        # Symmetric counterparts for (N-1,N-2) -> (N-2,N-1) and (N-1,N-3) -> (N-3,N-1)
         rows.extend([N-2, N-3])
         cols.extend([N-1, N-1])
         data.extend([
