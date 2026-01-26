@@ -179,40 +179,28 @@ def _boundary_corrections(A, B, C, grid, order=4):
         b_vals = proj(B, grid) if B is not None else np.zeros(N)
         c_vals = proj(C, grid) if C is not None else np.zeros(N)
         
-        M_1_minus_1 = (coeffs_d2[0] * a[0] / (h**2) + 
+        M_1_minus_1 = (coeffs_d2[0] * a[0] / (h**2) - 
                       coeffs_d1[0] * b_vals[0] / h + 
                       coeffs_d0[0] * c_vals[0])
         
-        M_N_plus_1 = (coeffs_d2[4] * a[N-1] / (h**2) + 
+        M_N_plus_1 = (coeffs_d2[4] * a[N-1] / (h**2) - 
                      coeffs_d1[4] * b_vals[N-1] / h + 
                      coeffs_d0[4] * c_vals[N-1])
         
         rows.extend([0, 0, 0])
         cols.extend([0, 1, 2])
         data.extend([
-            -6.0 * M_1_minus_1,
-            4.0 * M_1_minus_1,
-            -1.0 * M_1_minus_1
-        ])
-        rows.extend([1, 2])
-        cols.extend([0, 0])
-        data.extend([
-            4.0 * M_1_minus_1,
-            -1.0 * M_1_minus_1
+            6.0 * M_1_minus_1,
+            -4.0 * M_1_minus_1,
+            1.0 * M_1_minus_1
         ])
 
         rows.extend([N-1, N-1, N-1])
         cols.extend([N-3, N-2, N-1])
         data.extend([
-            -1.0 * M_N_plus_1,
-            4.0 * M_N_plus_1,
-            -6.0 * M_N_plus_1
-        ])
-        rows.extend([N-2, N-3])
-        cols.extend([N-1, N-1])
-        data.extend([
-            4.0 * M_N_plus_1,
-            -1.0 * M_N_plus_1
+            1.0 * M_N_plus_1,
+            -4.0 * M_N_plus_1,
+            6.0 * M_N_plus_1
         ])
     
     return np.array(rows), np.array(cols), np.array(data)
