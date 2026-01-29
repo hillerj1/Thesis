@@ -171,37 +171,50 @@ def _boundary_corrections(A, B, C, grid, order=4):
     if order == 2:
         return np.array(rows), np.array(cols), np.array(data)
     
-    if N >= 4 and order == 4:
+    if N >= 5 and order == 4:
         h = grid[1] - grid[0]
-        coeffs_d2, coeffs_d1, coeffs_d0 = _get_coefficients(order)
-        
-        a = proj(A, grid)
-        b_vals = proj(B, grid) if B is not None else np.zeros(N)
+        a_vals = proj(A, grid)
         c_vals = proj(C, grid) if C is not None else np.zeros(N)
-        
-        M_1_minus_1 = (coeffs_d2[0] * a[0] / (h**2) - 
-                      coeffs_d1[0] * b_vals[0] / h + 
-                      coeffs_d0[0] * c_vals[0])
-        
-        M_N_plus_1 = (coeffs_d2[4] * a[N-1] / (h**2) - 
-                     coeffs_d1[4] * b_vals[N-1] / h + 
-                     coeffs_d0[4] * c_vals[N-1])
-        
-        rows.extend([0, 0, 0])
-        cols.extend([0, 1, 2])
-        data.extend([
-            6.0 * M_1_minus_1,
-            -4.0 * M_1_minus_1,
-            1.0 * M_1_minus_1
-        ])
 
-        rows.extend([N-1, N-1, N-1])
-        cols.extend([N-3, N-2, N-1])
-        data.extend([
-            1.0 * M_N_plus_1,
-            -4.0 * M_N_plus_1,
-            6.0 * M_N_plus_1
-        ])
+        # Row 0 (i=0, x1): 6-point closure using x0..x5, with u(x_left)=0
+        row0_coefs = [-5.0/4.0, -1.0/3.0, 7.0/6.0, -1.0/2.0, 1.0/12.0] 
+        for j, coef in enumerate(row0_coefs):
+            rows.append(0)
+            cols.append(j)
+            data.append(a_vals[0] * coef / (h**2))
+        rows.append(0)
+        cols.append(0)
+        data.append(c_vals[0])
+
+        # Row 1 (i=1, x2): centered 5-point using x0..x4, with u(x_left)=0
+        row1_coefs = [4.0/3.0, -5.0/2.0, 4.0/3.0, -1.0/12.0]  # x1..x4
+        for j, coef in enumerate(row1_coefs):
+            rows.append(1)
+            cols.append(j)
+            data.append(a_vals[1] * coef / (h**2))
+        rows.append(1)
+        cols.append(1)
+        data.append(c_vals[1])
+
+        # Row N-2 (i=N-2, x_{N-1}): centered 5-point using x_{N-3}..x_{N+1}
+        rowN2_coefs = [-1.0/12.0, 4.0/3.0, -5.0/2.0, 4.0/3.0] 
+        for offset, coef in enumerate(rowN2_coefs):
+            rows.append(N - 2)
+            cols.append(N - 4 + offset)
+            data.append(a_vals[N - 2] * coef / (h**2))
+        rows.append(N - 2)
+        cols.append(N - 2)
+        data.append(c_vals[N - 2])
+
+        # Row N-1 (i=N-1, x_N): 6-point closure using x_{N-4}..x_{N+1}, with u(x_right)=0
+        rowN1_coefs = [1.0/12.0, -1.0/2.0, 7.0/6.0, -1.0/3.0, -5.0/4.0]
+        for offset, coef in enumerate(rowN1_coefs):
+            rows.append(N - 1)
+            cols.append(N - 5 + offset)
+            data.append(a_vals[N - 1] * coef / (h**2))
+        rows.append(N - 1)
+        cols.append(N - 1)
+        data.append(c_vals[N - 1])
     
     return np.array(rows), np.array(cols), np.array(data)
 
