@@ -1,3 +1,4 @@
 thesis_paper.tex
 thesis_paper/
 quantum_testing_utils.py
+generate_figure.py
