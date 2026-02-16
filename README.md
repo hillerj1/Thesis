@@ -1,91 +1,49 @@
-# Josh's Thesis: 4th-Order Finite Difference Quantum Eigen-problems
+# Senior thesis: finite-difference quantum eigenvalue problems
 
-This repository contains my senior thesis project for Union College Physics. The main objective is to develop a **more accurate numerical solver** for quantum systems by implementing a **4th-order finite difference method** as an alternative to the standard 2nd-order approach. This enables us to obtain higher precision eigenvalues and eigenfunctions of the Schrödinger equation without significantly increasing computational complexity.
+This project implements 2nd- and 4th-order finite-difference discretizations for 1D quantum eigenvalue problems (time-independent Schrödinger equation) and produces figures for the thesis (ISW + QSHO benchmarks).
 
-## 🎯 Project Overview
+## Project overview
 
-The project focuses on solving the time-independent Schrödinger equation:
+We solve eigenvalue problems of the form
 
-$$-\frac{1}{2}\nabla^2\psi + V(x)\psi = E\psi$$
+$$-\frac{1}{2}\psi''(x) + V(x)\psi(x) = E\psi(x),\qquad \psi(x_{\rm left})=\psi(x_{\rm right})=0,$$
 
-Using finite difference methods to discretize the kinetic energy operator $-\frac{1}{2}\nabla^2$ and solve the resulting eigenvalue problem using sparse matrix techniques.
+by discretizing the domain on a uniform interior grid and assembling a sparse Hamiltonian matrix.
 
-## 📁 Repository Structure
+## Repository structure
 
-### Core Files
-- **`fd4_QSHO_clean.ipynb`** → Main analysis notebook for the Quantum Simple Harmonic Oscillator (QSHO) with 4th-order finite differences
-- **`fd4_ISW_clean.ipynb`** → Analysis notebook for the Infinite Square Well (ISW) with 4th-order finite differences
-- **`fd2_QSHO.ipynb`** → Earlier implementation with 2nd-order finite differences for comparison
-- **`finite_difference_quantum.py`** → Standalone Python module containing all finite difference functions
+### Core modules
+- `finite_difference_quantum.py`: grid utilities and sparse finite-difference Hamiltonian assembly (`order=2` or `order=4`).
+- `eigenvalue_analysis.py`: analytical reference formulas and numerical wrappers for eigenvalue computations (used by some plotting scripts).
 
-### Supporting Files
-- **`thesis_paper/`** → LaTeX thesis document directory containing the complete written thesis
-- **`images/`** → Generated plots and figures for the thesis
-- **`__pycache__/`** → Python bytecode cache directory
+### Analysis and figure generation
+- `analysis_framework.ipynb`: larger “kitchen sink” notebook (convergence, timing, spectra, wavefunctions, error studies).
+- `generate_figure.py`: prompt-based local figure generator (routes a caption-like prompt to a matplotlib figure and writes a PNG to `images/`).
 
-## 🔧 Technical Implementation
+### Standalone notebooks (recommended for thesis figures)
+- `scripts/isw_convergence.ipynb`: generates `images/isw_convergence.png` (60 points, extended to \(N=6000\)).
+- `scripts/qsho_convergence.ipynb`: generates `images/qsho_convergence.png` (same structure as ISW; includes `x_inf` domain cutoff).
+- `scripts/isw_eigenvalue_error_comparison.ipynb`: generates `images/isw_numerical_vs_analytical_eigenvalues.png` (numerical vs analytical + relative error panel).
 
-### Finite Difference Methods
+### Outputs
+- `images/`: generated plots and schematics used in the thesis.
+- `thesis_paper/`: LaTeX thesis (`thesis_paper.tex`) and bibliography (`references.bib`).
 
-#### 2nd-Order Method
-- Standard three-point stencil for second derivatives
-- Error scales as $\mathcal{O}(\Delta x^2)$
-- Tridiagonal matrix structure
+## Numerical methods (notes)
 
-#### 4th-Order Method  
-- Five-point stencil for improved accuracy
-- Error scales as $\mathcal{O}(\Delta x^4)$
-- Pentadiagonal matrix structure
-- Includes boundary condition corrections
+- **2nd order** uses the standard 3-point stencil and produces a tridiagonal sparse matrix.
+- **4th order** uses a 5-point interior stencil plus boundary closures; the boundary rows can make the assembled operator *slightly non-symmetric*. In those cases, `eigs` (general ARPACK) with shift-invert is more robust than `eigsh` (Hermitian ARPACK).
 
-### Mathematical Formulation
+## Setup
 
-The finite difference approximation for the second derivative operator can be expressed as:
+### Python dependencies
 
-**2nd-Order Stencil:**
-$$\frac{d^2\psi}{dx^2} \approx \frac{\psi_{i+1} - 2\psi_i + \psi_{i-1}}{(\Delta x)^2}$$
-
-**4th-Order Stencil:**
-$$\frac{d^2\psi}{dx^2} \approx \frac{-\psi_{i+2} + 16\psi_{i+1} - 30\psi_i + 16\psi_{i-1} - \psi_{i-2}}{12(\Delta x)^2}$$
-
-### Key Functions
-
-```python
-# Matrix assembly
-sparseMatrixMaker(A, B, C, grid)      # 2nd-order
-sparse_Matrix_Maker4(A, B, C, grid)   # 4th-order
-
-# Hamiltonian construction
-hamiltonian(V, x_left, x_right, N)    # 2nd-order
-hamiltonian_4th(V, x_left, x_right, N) # 4th-order
-```
-
-### Analysis Features
-
-- **Convergence Studies**: Error scaling analysis with log-log plots comparing 2nd vs 4th-order methods
-- **Timing Comparisons**: Performance benchmarks between methods
-- **Matrix Verification**: Validation against analytical solutions for both QSHO and ISW systems
-- **Eigenvalue Analysis**: Ground state and excited state calculations for multiple quantum systems
-- **Quantum Systems**: Analysis of both Quantum Simple Harmonic Oscillator and Infinite Square Well potentials
-
-## 🚀 Installation & Setup
-
-### Prerequisites
-- Python 3.7 or higher
-- JupyterLab or VSCode with Python extension
-
-### Required Packages
 ```bash
-pip install numpy scipy matplotlib
+pip install numpy scipy matplotlib jupyter
 ```
 
-## 📄 Thesis Paper
+## Thesis paper
 
-The complete written thesis is located in the `thesis_paper/` directory:
-- **`thesis_paper.tex`** → Main LaTeX source file for the thesis document
-- **`thesis_paper.pdf`** → Compiled PDF version of the thesis
-- Additional LaTeX auxiliary files (`.aux`, `.log`, `.toc`, etc.) are generated during compilation
-
-## 📊 Generated Figures
-
-The `images/` directory contains convergence plots and other visualizations generated by the analysis notebooks, including comparative performance studies between different finite difference orders.
+The LaTeX thesis is in `thesis_paper/`:
+- `thesis_paper/thesis_paper.tex`
+- `thesis_paper/references.bib`
