@@ -2,3 +2,18 @@ thesis_paper.tex
 thesis_paper/
 quantum_testing_utils.py
 generate_figure.py
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+
+# Matplotlib cache
+.cache/
+.mplconfig/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
